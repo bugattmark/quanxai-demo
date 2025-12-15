@@ -1,16 +1,95 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, ArrowUpDown, ChevronRight, X, Check, Info } from 'lucide-react';
+import { Plus, Trash2, ArrowUpDown, ChevronRight, X, Check, Info, ChevronDown } from 'lucide-react';
 import { guardrails, Guardrail } from '@/data/mock/guardrails';
 
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+interface DeniedTopic {
+  name: string;
+  definition: string;
+  inputEnabled: boolean;
+  inputAction: string;
+  outputEnabled: boolean;
+  outputAction: string;
+}
+
+interface PIIType {
+  type: string;
+  inputEnabled: boolean;
+  inputAction: string;
+  outputEnabled: boolean;
+  outputAction: string;
+}
+
+interface RegexPattern {
+  name: string;
+  pattern: string;
+  inputEnabled: boolean;
+  inputAction: string;
+  outputEnabled: boolean;
+  outputAction: string;
+  description?: string;
+}
+
+interface CustomWord {
+  phrase: string;
+  inputEnabled: boolean;
+  inputAction: string;
+  outputEnabled: boolean;
+  outputAction: string;
+}
 
 export default function GuardrailsPage() {
   const [showWizard, setShowWizard] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [sortColumn, setSortColumn] = useState<string>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Modal states
+  const [showDeniedTopicModal, setShowDeniedTopicModal] = useState(false);
+  const [showPIIModal, setShowPIIModal] = useState(false);
+  const [showRegexModal, setShowRegexModal] = useState(false);
+  const [showWordModal, setShowWordModal] = useState(false);
+  const [showSamplePhrases, setShowSamplePhrases] = useState(false);
+  const [showRegexDescription, setShowRegexDescription] = useState(false);
+
+  // Form states for modals
+  const [deniedTopicForm, setDeniedTopicForm] = useState<DeniedTopic>({
+    name: '',
+    definition: '',
+    inputEnabled: true,
+    inputAction: 'Block',
+    outputEnabled: true,
+    outputAction: 'Block',
+  });
+
+  const [piiForm, setPIIForm] = useState<PIIType>({
+    type: '',
+    inputEnabled: true,
+    inputAction: 'Block',
+    outputEnabled: true,
+    outputAction: 'Block',
+  });
+
+  const [regexForm, setRegexForm] = useState<RegexPattern>({
+    name: '',
+    pattern: '',
+    inputEnabled: true,
+    inputAction: 'Block',
+    outputEnabled: true,
+    outputAction: 'Block',
+    description: '',
+  });
+
+  const [wordForm, setWordForm] = useState<CustomWord>({
+    phrase: '',
+    inputEnabled: true,
+    inputAction: 'Block',
+    outputEnabled: true,
+    outputAction: 'Block',
+  });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -29,13 +108,81 @@ export default function GuardrailsPage() {
     promptAttackSeverity: 3,
     contentFilterTier: 'classic',
     // Denied topics
-    deniedTopics: [] as any[],
+    deniedTopics: [
+      {
+        name: 'Investment_Advice',
+        definition: 'Investment advice refers to inquiries, guidance, or recommendations regarding the management or allocation of funds or assets with the goal of generating returns or achieving specific financial objectives.',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+      },
+      {
+        name: 'Political_Opinion',
+        definition: 'Discussion of political candidates, parties, or election predictions.',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: false,
+        outputAction: 'Block',
+      },
+    ] as DeniedTopic[],
+    deniedTopicsTier: 'classic',
     // Word filters
     filterProfanity: false,
-    customWords: [] as string[],
+    customWords: [
+      {
+        phrase: 'confidential',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+      },
+      {
+        phrase: 'secret password',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+      },
+    ] as CustomWord[],
     // PII filters
-    piiTypes: [] as string[],
-    regexPatterns: [] as any[],
+    piiTypes: [
+      {
+        type: 'EMAIL',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+      },
+      {
+        type: 'PHONE',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: false,
+        outputAction: 'Block',
+      },
+      {
+        type: 'CREDIT_CARD',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+      },
+    ] as PIIType[],
+    regexPatterns: [
+      {
+        name: 'Booking_ID',
+        pattern: '^ID\\d{3}[A-Z]{3}$',
+        inputEnabled: true,
+        inputAction: 'Block',
+        outputEnabled: true,
+        outputAction: 'Block',
+        description: 'Matches booking IDs in format ID123ABC',
+      },
+    ] as RegexPattern[],
+    // Grounding check
+    enableGrounding: false,
+    enableRelevance: false,
   });
 
   const sortedGuardrails = [...guardrails].sort((a, b) => {
@@ -68,6 +215,11 @@ export default function GuardrailsPage() {
     { id: 'misconduct', label: 'Misconduct', value: formData.misconductSeverity, onChange: (v: number) => setFormData({ ...formData, misconductSeverity: v }) },
   ];
 
+  const piiTypeOptions = [
+    'EMAIL', 'PHONE', 'CREDIT_CARD', 'SSN', 'PASSPORT',
+    'DRIVER_LICENSE', 'ADDRESS', 'NAME', 'DATE_OF_BIRTH', 'IP_ADDRESS'
+  ];
+
   const handleSort = (column: string) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -75,6 +227,97 @@ export default function GuardrailsPage() {
       setSortColumn(column);
       setSortDirection('asc');
     }
+  };
+
+  const handleAddDeniedTopic = () => {
+    setFormData({
+      ...formData,
+      deniedTopics: [...formData.deniedTopics, deniedTopicForm],
+    });
+    setDeniedTopicForm({
+      name: '',
+      definition: '',
+      inputEnabled: true,
+      inputAction: 'Block',
+      outputEnabled: true,
+      outputAction: 'Block',
+    });
+    setShowDeniedTopicModal(false);
+  };
+
+  const handleAddPII = () => {
+    setFormData({
+      ...formData,
+      piiTypes: [...formData.piiTypes, piiForm],
+    });
+    setPIIForm({
+      type: '',
+      inputEnabled: true,
+      inputAction: 'Block',
+      outputEnabled: true,
+      outputAction: 'Block',
+    });
+    setShowPIIModal(false);
+  };
+
+  const handleAddRegex = () => {
+    setFormData({
+      ...formData,
+      regexPatterns: [...formData.regexPatterns, regexForm],
+    });
+    setRegexForm({
+      name: '',
+      pattern: '',
+      inputEnabled: true,
+      inputAction: 'Block',
+      outputEnabled: true,
+      outputAction: 'Block',
+      description: '',
+    });
+    setShowRegexModal(false);
+  };
+
+  const handleAddWord = () => {
+    setFormData({
+      ...formData,
+      customWords: [...formData.customWords, wordForm],
+    });
+    setWordForm({
+      phrase: '',
+      inputEnabled: true,
+      inputAction: 'Block',
+      outputEnabled: true,
+      outputAction: 'Block',
+    });
+    setShowWordModal(false);
+  };
+
+  const handleDeleteDeniedTopic = (index: number) => {
+    setFormData({
+      ...formData,
+      deniedTopics: formData.deniedTopics.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleDeletePII = (index: number) => {
+    setFormData({
+      ...formData,
+      piiTypes: formData.piiTypes.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleDeleteRegex = (index: number) => {
+    setFormData({
+      ...formData,
+      regexPatterns: formData.regexPatterns.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleDeleteWord = (index: number) => {
+    setFormData({
+      ...formData,
+      customWords: formData.customWords.filter((_, i) => i !== index),
+    });
   };
 
   const SortButton = ({ column, label }: { column: string; label: string }) => (
@@ -114,6 +357,27 @@ export default function GuardrailsPage() {
     return labels[value] || 'None';
   };
 
+  // Modal Component
+  const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="p-6">
+            {children}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (showWizard) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -147,6 +411,8 @@ export default function GuardrailsPage() {
                   className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
                     currentStep === step.num
                       ? 'bg-indigo-600 text-white'
+                      : currentStep > step.num
+                      ? 'bg-green-600 text-white'
                       : 'bg-gray-200 text-gray-600'
                   }`}
                 >
@@ -494,34 +760,97 @@ export default function GuardrailsPage() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-semibold text-gray-900">
-                      Denied topics (0)
+                      Denied topics ({formData.deniedTopics.length})
                     </h3>
-                    <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium">
+                    <button
+                      onClick={() => setShowDeniedTopicModal(true)}
+                      className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium"
+                    >
                       Add denied topic
                     </button>
                   </div>
 
-                  <div className="text-center py-12 text-gray-500">
-                    No denied topics added
-                  </div>
+                  {formData.deniedTopics.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      No denied topics added
+                    </div>
+                  ) : (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Name</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Definition</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Input</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Output</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {formData.deniedTopics.map((topic, index) => (
+                            <tr key={index} className="border-b border-gray-100">
+                              <td className="px-4 py-3 text-gray-900">{topic.name}</td>
+                              <td className="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">{topic.definition}</td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-gray-600">
+                                  {topic.inputEnabled ? topic.inputAction : 'Disabled'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="text-xs text-gray-600">
+                                  {topic.outputEnabled ? topic.outputAction : 'Disabled'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <button
+                                  onClick={() => handleDeleteDeniedTopic(index)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   <div className="mt-6">
                     <h4 className="text-sm font-semibold text-gray-900 mb-2">Denied topics tier</h4>
                     <p className="text-sm text-gray-600 mb-4">The Denied topics tier to use for the guardrail.</p>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="border-2 border-gray-200 rounded-lg p-4 opacity-50">
+                      <div
+                        className={`border-2 rounded-lg p-4 cursor-pointer ${
+                          formData.deniedTopicsTier === 'classic' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => setFormData({ ...formData, deniedTopicsTier: 'classic' })}
+                      >
                         <div className="flex items-center gap-2 mb-2">
-                          <input type="radio" disabled />
+                          <input
+                            type="radio"
+                            checked={formData.deniedTopicsTier === 'classic'}
+                            onChange={() => setFormData({ ...formData, deniedTopicsTier: 'classic' })}
+                          />
                           <h5 className="text-sm font-semibold text-gray-900">Classic</h5>
                         </div>
                         <p className="text-xs text-gray-600">
                           An established solution supporting English, French, and Spanish languages.
                         </p>
                       </div>
-                      <div className="border-2 border-gray-200 rounded-lg p-4 opacity-50">
+                      <div
+                        className={`border-2 rounded-lg p-4 cursor-pointer ${
+                          formData.deniedTopicsTier === 'standard' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'
+                        }`}
+                        onClick={() => setFormData({ ...formData, deniedTopicsTier: 'standard' })}
+                      >
                         <div className="flex items-center gap-2 mb-2">
-                          <input type="radio" disabled />
+                          <input
+                            type="radio"
+                            checked={formData.deniedTopicsTier === 'standard'}
+                            onChange={() => setFormData({ ...formData, deniedTopicsTier: 'standard' })}
+                          />
                           <h5 className="text-sm font-semibold text-gray-900">Standard</h5>
                         </div>
                         <p className="text-xs text-gray-600">
@@ -531,6 +860,124 @@ export default function GuardrailsPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Denied Topic Modal */}
+                <Modal
+                  isOpen={showDeniedTopicModal}
+                  onClose={() => setShowDeniedTopicModal(false)}
+                  title="Add denied topic"
+                >
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Name</label>
+                      <input
+                        type="text"
+                        placeholder="Enter name"
+                        value={deniedTopicForm.name}
+                        onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Valid characters are a-z, A-Z, 0-9, underscore (_), hyphen (-), space, exclamation point (!), question mark (?), and period (.). The name can have up to 100 characters.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Definition</label>
+                      <p className="text-xs text-gray-600 mb-2">
+                        Provide a clear definition to detect and block user inputs and FM responses that fall into this topic. Avoid starting with "don't".
+                      </p>
+                      <textarea
+                        placeholder="Example - Investment advice refers to inquiries, guidance, or recommendations regarding the management or allocation of funds or assets with the goal of generating returns or achieving specific financial objectives."
+                        value={deniedTopicForm.definition}
+                        onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, definition: e.target.value })}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm italic"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        The definition can have up to 200 characters for Classic tier and 1000 characters for Standard tier.
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4">Input</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="checkbox"
+                          checked={deniedTopicForm.inputEnabled}
+                          onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, inputEnabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label className="text-sm text-gray-900">Enable</label>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-700 block mb-2">Input action</label>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Choose what action the guardrail should take on user inputs before they reach the model.
+                        </p>
+                        <select
+                          value={deniedTopicForm.inputAction}
+                          onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, inputAction: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          <option>Block</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4">Output</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="checkbox"
+                          checked={deniedTopicForm.outputEnabled}
+                          onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, outputEnabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label className="text-sm text-gray-900">Enable</label>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-700 block mb-2">Output action</label>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Choose what action the guardrail should take on model outputs before displayed to users.
+                        </p>
+                        <select
+                          value={deniedTopicForm.outputAction}
+                          onChange={(e) => setDeniedTopicForm({ ...deniedTopicForm, outputAction: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          <option>Block</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <button
+                        onClick={() => setShowSamplePhrases(!showSamplePhrases)}
+                        className="flex items-center gap-2 text-sm font-semibold text-gray-900"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showSamplePhrases ? 'rotate-180' : ''}`} />
+                        Add sample phrases - <span className="italic font-normal">optional</span>
+                      </button>
+                    </div>
+
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => setShowDeniedTopicModal(false)}
+                        className="px-6 py-2 text-sm text-indigo-600 hover:text-indigo-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddDeniedTopic}
+                        disabled={!deniedTopicForm.name || !deniedTopicForm.definition}
+                        className="px-6 py-2 text-sm bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white rounded-lg"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </Modal>
 
                 <div className="mt-6 flex gap-3">
                   <button
@@ -659,8 +1106,11 @@ export default function GuardrailsPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-semibold text-gray-900">View and edit words and phrases (1)</h4>
-                        <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                        <h4 className="text-sm font-semibold text-gray-900">View and edit words and phrases ({formData.customWords.length})</h4>
+                        <button
+                          onClick={() => setShowWordModal(true)}
+                          className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                        >
                           Add
                         </button>
                       </div>
@@ -676,43 +1126,139 @@ export default function GuardrailsPage() {
                               <th className="px-4 py-2 text-left font-medium text-gray-700">Enable output</th>
                               <th className="px-4 py-2 text-left font-medium text-gray-700">Output action</th>
                               <th className="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            <tr className="border-b border-gray-100">
-                              <td className="px-4 py-3"><input type="checkbox" /></td>
-                              <td className="px-4 py-3 text-gray-900">word or phrase</td>
-                              <td className="px-4 py-3"><input type="checkbox" defaultChecked /></td>
-                              <td className="px-4 py-3">
-                                <select className="px-3 py-1 border border-gray-300 rounded text-sm">
-                                  <option>Block</option>
-                                </select>
-                              </td>
-                              <td className="px-4 py-3"><input type="checkbox" defaultChecked /></td>
-                              <td className="px-4 py-3">
-                                <select className="px-3 py-1 border border-gray-300 rounded text-sm">
-                                  <option>Block</option>
-                                </select>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className="inline-flex items-center gap-1 text-green-600 text-xs">
-                                  <Check className="w-4 h-4" />
-                                  Valid
-                                </span>
-                              </td>
-                            </tr>
+                            {formData.customWords.map((word, index) => (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="px-4 py-3"><input type="checkbox" /></td>
+                                <td className="px-4 py-3 text-gray-900">{word.phrase}</td>
+                                <td className="px-4 py-3">
+                                  <input type="checkbox" checked={word.inputEnabled} readOnly />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">{word.inputAction}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <input type="checkbox" checked={word.outputEnabled} readOnly />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">{word.outputAction}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                                    <Check className="w-4 h-4" />
+                                    Valid
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={() => handleDeleteWord(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
 
                       <div className="mt-4">
-                        <button className="px-4 py-2 text-sm text-indigo-600 border border-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <button
+                          onClick={() => setShowWordModal(true)}
+                          className="px-4 py-2 text-sm text-indigo-600 border border-indigo-600 hover:bg-indigo-50 rounded-lg"
+                        >
                           Add a word or phrase
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Word Modal */}
+                <Modal
+                  isOpen={showWordModal}
+                  onClose={() => setShowWordModal(false)}
+                  title="Add custom word or phrase"
+                >
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">Word or phrase</label>
+                      <input
+                        type="text"
+                        placeholder="Enter word or phrase"
+                        value={wordForm.phrase}
+                        onChange={(e) => setWordForm({ ...wordForm, phrase: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4">Input</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="checkbox"
+                          checked={wordForm.inputEnabled}
+                          onChange={(e) => setWordForm({ ...wordForm, inputEnabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label className="text-sm text-gray-900">Enable</label>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-700 block mb-2">Input action</label>
+                        <select
+                          value={wordForm.inputAction}
+                          onChange={(e) => setWordForm({ ...wordForm, inputAction: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          <option>Block</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900 mb-4">Output</h4>
+                      <div className="flex items-center gap-3 mb-3">
+                        <input
+                          type="checkbox"
+                          checked={wordForm.outputEnabled}
+                          onChange={(e) => setWordForm({ ...wordForm, outputEnabled: e.target.checked })}
+                          className="rounded"
+                        />
+                        <label className="text-sm text-gray-900">Enable</label>
+                      </div>
+                      <div>
+                        <label className="text-sm text-gray-700 block mb-2">Output action</label>
+                        <select
+                          value={wordForm.outputAction}
+                          onChange={(e) => setWordForm({ ...wordForm, outputAction: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        >
+                          <option>Block</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 justify-end">
+                      <button
+                        onClick={() => setShowWordModal(false)}
+                        className="px-6 py-2 text-sm text-indigo-600 hover:text-indigo-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleAddWord}
+                        disabled={!wordForm.phrase}
+                        className="px-6 py-2 text-sm bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white rounded-lg"
+                      >
+                        Confirm
+                      </button>
+                    </div>
+                  </div>
+                </Modal>
 
                 <div className="mt-6 flex gap-3">
                   <button
@@ -759,15 +1305,149 @@ export default function GuardrailsPage() {
 
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-semibold text-gray-900">PII types</h4>
-                      <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                      <button
+                        onClick={() => setShowPIIModal(true)}
+                        className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                      >
                         Add new PII
                       </button>
                     </div>
 
-                    <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
-                      No PII types added.
-                    </div>
+                    {formData.piiTypes.length === 0 ? (
+                      <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+                        No PII types added.
+                      </div>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-medium text-gray-700">PII Type</th>
+                              <th className="px-4 py-3 text-left font-medium text-gray-700">Input</th>
+                              <th className="px-4 py-3 text-left font-medium text-gray-700">Output</th>
+                              <th className="px-4 py-3 text-left font-medium text-gray-700">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {formData.piiTypes.map((pii, index) => (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="px-4 py-3 text-gray-900">{pii.type}</td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">
+                                    {pii.inputEnabled ? pii.inputAction : 'Disabled'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">
+                                    {pii.outputEnabled ? pii.outputAction : 'Disabled'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={() => handleDeletePII(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
+
+                  {/* PII Modal */}
+                  <Modal
+                    isOpen={showPIIModal}
+                    onClose={() => setShowPIIModal(false)}
+                    title="Add new PII"
+                  >
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">PII type</label>
+                        <select
+                          value={piiForm.type}
+                          onChange={(e) => setPIIForm({ ...piiForm, type: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm italic focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Choose PII type</option>
+                          {piiTypeOptions.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4">Input</h4>
+                        <div className="flex items-center gap-3 mb-3">
+                          <input
+                            type="checkbox"
+                            checked={piiForm.inputEnabled}
+                            onChange={(e) => setPIIForm({ ...piiForm, inputEnabled: e.target.checked })}
+                            className="rounded"
+                          />
+                          <label className="text-sm text-gray-900">Enable</label>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-700 block mb-2">Input action</label>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Choose what action the guardrail should take on user inputs before they reach the model
+                          </p>
+                          <select
+                            value={piiForm.inputAction}
+                            onChange={(e) => setPIIForm({ ...piiForm, inputAction: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option>Block</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4">Output</h4>
+                        <div className="flex items-center gap-3 mb-3">
+                          <input
+                            type="checkbox"
+                            checked={piiForm.outputEnabled}
+                            onChange={(e) => setPIIForm({ ...piiForm, outputEnabled: e.target.checked })}
+                            className="rounded"
+                          />
+                          <label className="text-sm text-gray-900">Enable</label>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-700 block mb-2">Output action</label>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Choose what action the guardrail should take on model outputs before displayed to users
+                          </p>
+                          <select
+                            value={piiForm.outputAction}
+                            onChange={(e) => setPIIForm({ ...piiForm, outputAction: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option>Block</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 justify-end">
+                        <button
+                          onClick={() => setShowPIIModal(false)}
+                          className="px-6 py-2 text-sm text-indigo-600 hover:text-indigo-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddPII}
+                          disabled={!piiForm.type}
+                          className="px-6 py-2 text-sm bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white rounded-lg"
+                        >
+                          Confirm
+                        </button>
+                      </div>
+                    </div>
+                  </Modal>
 
                   {/* Regex Patterns */}
                   <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -778,7 +1458,10 @@ export default function GuardrailsPage() {
 
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="text-sm font-semibold text-gray-900">Regex patterns</h4>
-                      <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                      <button
+                        onClick={() => setShowRegexModal(true)}
+                        className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg"
+                      >
                         Add regex pattern
                       </button>
                     </div>
@@ -793,18 +1476,174 @@ export default function GuardrailsPage() {
                             <th className="px-4 py-3 text-left font-medium text-gray-700">Input action</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-700">Output action</th>
                             <th className="px-4 py-3 text-left font-medium text-gray-700">Description</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                              No regex patterns added.
-                            </td>
-                          </tr>
+                          {formData.regexPatterns.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                                No regex patterns added.
+                              </td>
+                            </tr>
+                          ) : (
+                            formData.regexPatterns.map((regex, index) => (
+                              <tr key={index} className="border-b border-gray-100">
+                                <td className="px-4 py-3"><input type="checkbox" /></td>
+                                <td className="px-4 py-3 text-gray-900">{regex.name}</td>
+                                <td className="px-4 py-3 text-gray-600 font-mono text-xs">{regex.pattern}</td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">
+                                    {regex.inputEnabled ? regex.inputAction : 'Disabled'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-xs text-gray-600">
+                                    {regex.outputEnabled ? regex.outputAction : 'Disabled'}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-600 text-xs max-w-xs truncate">
+                                  {regex.description || '-'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    onClick={() => handleDeleteRegex(index)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
                   </div>
+
+                  {/* Regex Modal */}
+                  <Modal
+                    isOpen={showRegexModal}
+                    onClose={() => setShowRegexModal(false)}
+                    title="Add regex pattern"
+                  >
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Name</label>
+                        <p className="text-xs text-gray-600 mb-2">
+                          Label to identify the pattern. Shown as an identifier if PII is masked, e.g. [BOOKING_ID].
+                        </p>
+                        <input
+                          type="text"
+                          placeholder="Example - Booking ID"
+                          value={regexForm.name}
+                          onChange={(e) => setRegexForm({ ...regexForm, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 italic"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Regex name can have up to 100 characters.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Regex pattern</label>
+                        <input
+                          type="text"
+                          placeholder="Example - ^ID\d{3}[A-Z]{3}$"
+                          value={regexForm.pattern}
+                          onChange={(e) => setRegexForm({ ...regexForm, pattern: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm italic"
+                        />
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4">Input</h4>
+                        <div className="flex items-center gap-3 mb-3">
+                          <input
+                            type="checkbox"
+                            checked={regexForm.inputEnabled}
+                            onChange={(e) => setRegexForm({ ...regexForm, inputEnabled: e.target.checked })}
+                            className="rounded"
+                          />
+                          <label className="text-sm text-gray-900">Enable</label>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-700 block mb-2">Input action</label>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Choose what action the guardrail should take on user inputs before they reach the model
+                          </p>
+                          <select
+                            value={regexForm.inputAction}
+                            onChange={(e) => setRegexForm({ ...regexForm, inputAction: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option>Block</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <h4 className="text-sm font-semibold text-gray-900 mb-4">Output</h4>
+                        <div className="flex items-center gap-3 mb-3">
+                          <input
+                            type="checkbox"
+                            checked={regexForm.outputEnabled}
+                            onChange={(e) => setRegexForm({ ...regexForm, outputEnabled: e.target.checked })}
+                            className="rounded"
+                          />
+                          <label className="text-sm text-gray-900">Enable</label>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-700 block mb-2">Output action</label>
+                          <p className="text-xs text-gray-600 mb-2">
+                            Choose what action the guardrail should take on model outputs before displayed to users
+                          </p>
+                          <select
+                            value={regexForm.outputAction}
+                            onChange={(e) => setRegexForm({ ...regexForm, outputAction: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          >
+                            <option>Block</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <button
+                          onClick={() => setShowRegexDescription(!showRegexDescription)}
+                          className="flex items-center gap-2 text-sm font-semibold text-gray-900"
+                        >
+                          <ChevronDown className={`w-4 h-4 transition-transform ${showRegexDescription ? 'rotate-180' : ''}`} />
+                          Add description - <span className="italic font-normal">optional</span>
+                        </button>
+                        {showRegexDescription && (
+                          <textarea
+                            placeholder="Enter description"
+                            value={regexForm.description}
+                            onChange={(e) => setRegexForm({ ...regexForm, description: e.target.value })}
+                            rows={3}
+                            className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex gap-3 justify-end">
+                        <button
+                          onClick={() => setShowRegexModal(false)}
+                          className="px-6 py-2 text-sm text-indigo-600 hover:text-indigo-700"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleAddRegex}
+                          disabled={!regexForm.name || !regexForm.pattern}
+                          className="px-6 py-2 text-sm bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white rounded-lg"
+                        >
+                          Confirm
+                        </button>
+                      </div>
+                    </div>
+                  </Modal>
                 </div>
 
                 <div className="mt-6 flex gap-3">
@@ -852,7 +1691,12 @@ export default function GuardrailsPage() {
                     </p>
 
                     <div className="flex items-center gap-3">
-                      <input type="checkbox" className="rounded w-5 h-5" />
+                      <input
+                        type="checkbox"
+                        checked={formData.enableGrounding}
+                        onChange={(e) => setFormData({ ...formData, enableGrounding: e.target.checked })}
+                        className="rounded w-5 h-5"
+                      />
                       <label className="text-sm font-medium text-gray-900">
                         Enable grounding check
                       </label>
@@ -867,7 +1711,12 @@ export default function GuardrailsPage() {
                     </p>
 
                     <div className="flex items-center gap-3">
-                      <input type="checkbox" className="rounded w-5 h-5" />
+                      <input
+                        type="checkbox"
+                        checked={formData.enableRelevance}
+                        onChange={(e) => setFormData({ ...formData, enableRelevance: e.target.checked })}
+                        className="rounded w-5 h-5"
+                      />
                       <label className="text-sm font-medium text-gray-900">
                         Enable relevance check
                       </label>
@@ -935,8 +1784,13 @@ export default function GuardrailsPage() {
                     <h3 className="text-base font-semibold text-gray-900 mb-4">
                       Optional configurations
                     </h3>
-                    <div className="text-sm text-gray-600">
-                      Denied topics, word filters, sensitive information filters, and contextual grounding check: Not configured
+                    <div className="space-y-2 text-sm text-gray-600">
+                      <div>Denied topics: {formData.deniedTopics.length} configured</div>
+                      <div>Custom words: {formData.customWords.length} configured</div>
+                      <div>PII types: {formData.piiTypes.length} configured</div>
+                      <div>Regex patterns: {formData.regexPatterns.length} configured</div>
+                      <div>Grounding check: {formData.enableGrounding ? 'Enabled' : 'Disabled'}</div>
+                      <div>Relevance check: {formData.enableRelevance ? 'Enabled' : 'Disabled'}</div>
                     </div>
                   </div>
                 </div>
