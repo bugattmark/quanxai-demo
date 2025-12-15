@@ -125,12 +125,12 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {/* Virtual Keys */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/keys"
           icon={<Key className="w-5 h-5" />}
           label="Virtual Keys"
           isActive={pathname.startsWith('/dashboard/keys')}
-        />
+        /> */}
 
         {/* Test Key */}
         <NavItem
@@ -141,36 +141,36 @@ export default function Sidebar() {
         />
 
         {/* Models + Endpoints */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/models"
           icon={<Cpu className="w-5 h-5" />}
           label="Models + Endpoints"
           isActive={pathname.startsWith('/dashboard/models')}
-        />
+        /> */}
 
         {/* Usage */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/usage"
           icon={<BarChart3 className="w-5 h-5" />}
           label="Usage"
           isActive={pathname.startsWith('/dashboard/usage')}
-        />
+        /> */}
 
         {/* Teams */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/teams"
           icon={<Users className="w-5 h-5" />}
           label="Teams"
           isActive={pathname.startsWith('/dashboard/teams')}
-        />
+        /> */}
 
         {/* Organizations */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard"
           icon={<Building2 className="w-5 h-5" />}
           label="Organizations"
           isActive={pathname === '/dashboard'}
-        />
+        /> */}
 
         {/* Internal Users */}
         <NavItem
@@ -197,23 +197,23 @@ export default function Sidebar() {
         />
 
         {/* Logs */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/logs"
           icon={<FileText className="w-5 h-5" />}
           label="Logs"
           isActive={pathname.startsWith('/dashboard/logs')}
-        />
+        /> */}
 
         {/* Guardrails */}
-        <NavItem
+        {/* <NavItem
           href="/dashboard/guardrails"
           icon={<Shield className="w-5 h-5" />}
           label="Guardrails"
           isActive={pathname.startsWith('/dashboard/guardrails')}
-        />
+        /> */}
 
         {/* Products Section */}
-        <ExpandableSection
+        {/* <ExpandableSection
           icon={<Package className="w-5 h-5" />}
           label="Products"
           expanded={productsExpanded}
@@ -256,7 +256,7 @@ export default function Sidebar() {
             <Cpu className="w-4 h-4" />
             <span>Custom Endpoints</span>
           </Link>
-        </ExpandableSection>
+        </ExpandableSection> */}
 
         {/* Tools Section */}
         <ExpandableSection
@@ -305,7 +305,7 @@ export default function Sidebar() {
         </ExpandableSection>
 
         {/* Experimental Section */}
-        <ExpandableSection
+        {/* <ExpandableSection
           icon={<FlaskConical className="w-5 h-5" />}
           label="Experimental"
           expanded={experimentalExpanded}
@@ -324,7 +324,7 @@ export default function Sidebar() {
             <ClipboardList className="w-4 h-4" />
             <span>Audit Logs</span>
           </Link>
-        </ExpandableSection>
+        </ExpandableSection> */}
 
         {/* Settings Section */}
         <ExpandableSection
