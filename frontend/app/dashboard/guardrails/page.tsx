@@ -481,31 +481,66 @@ export default function GuardrailsPage() {
               </div>
             )}
 
-            {/* Step 3-6 Placeholders */}
-            {(currentStep === 3 || currentStep === 4 || currentStep === 5 || currentStep === 6) && (
-              <div className="max-w-3xl">
+            {/* Step 3: Denied Topics */}
+            {currentStep === 3 && (
+              <div className="max-w-5xl">
                 <h2 className="text-xl font-bold text-gray-900 mb-2">
-                  {steps.find(s => s.num === currentStep)?.title}
+                  Add denied topics - <span className="italic font-normal">optional</span>
                 </h2>
                 <p className="text-sm text-gray-600 mb-6">
-                  Step {currentStep} - <span className="italic">optional</span>
+                  Add up to 30 denied topics to block user inputs or model responses associated with the topic.
                 </p>
 
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
-                  <p className="text-gray-500 text-center py-8">
-                    This section is optional and can be configured later.
-                  </p>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-base font-semibold text-gray-900">
+                      Denied topics (0)
+                    </h3>
+                    <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium">
+                      Add denied topic
+                    </button>
+                  </div>
+
+                  <div className="text-center py-12 text-gray-500">
+                    No denied topics added
+                  </div>
+
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Denied topics tier</h4>
+                    <p className="text-sm text-gray-600 mb-4">The Denied topics tier to use for the guardrail.</p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="border-2 border-gray-200 rounded-lg p-4 opacity-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <input type="radio" disabled />
+                          <h5 className="text-sm font-semibold text-gray-900">Classic</h5>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          An established solution supporting English, French, and Spanish languages.
+                        </p>
+                      </div>
+                      <div className="border-2 border-gray-200 rounded-lg p-4 opacity-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <input type="radio" disabled />
+                          <h5 className="text-sm font-semibold text-gray-900">Standard</h5>
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          An improved, more robust solution offering higher accuracy supporting over 50 languages.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6 flex gap-3">
                   <button
-                    onClick={() => setCurrentStep((currentStep + 1) as Step)}
+                    onClick={() => setCurrentStep(4)}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
                   >
                     Next
                   </button>
                   <button
-                    onClick={() => setCurrentStep((currentStep - 1) as Step)}
+                    onClick={() => setCurrentStep(2)}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
                     Previous
@@ -515,6 +550,349 @@ export default function GuardrailsPage() {
                     className="px-6 py-2 text-indigo-600 hover:text-indigo-700"
                   >
                     Skip to Review and create
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Word Filters */}
+            {currentStep === 4 && (
+              <div className="max-w-5xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Add word filters - <span className="italic font-normal">optional</span>
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Use these filters to block certain words and phrases in user inputs and model responses.
+                </p>
+
+                <div className="space-y-6">
+                  {/* Profanity Filter */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">Profanity filter</h3>
+
+                    <div className="flex items-start gap-3 mb-6">
+                      <input
+                        type="checkbox"
+                        checked={formData.filterProfanity}
+                        onChange={(e) => setFormData({ ...formData, filterProfanity: e.target.checked })}
+                        className="mt-1 rounded"
+                      />
+                      <div>
+                        <label className="text-sm font-medium text-gray-900 block mb-1">
+                          Filter profanity
+                        </label>
+                        <p className="text-sm text-gray-600">
+                          Enable this feature to block profane words in user inputs and model responses. The list of words is based on the global definition of profanity and is subject to change.
+                        </p>
+                      </div>
+                    </div>
+
+                    {formData.filterProfanity && (
+                      <>
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-4">Input</h4>
+                          <div className="flex items-center gap-3 mb-2">
+                            <input type="checkbox" className="rounded" disabled />
+                            <label className="text-sm text-gray-500">Enable</label>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-700 block mb-2">Input action</label>
+                            <p className="text-xs text-gray-600 mb-2">
+                              Choose what action the guardrail should take on user inputs before they reach the model
+                            </p>
+                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100" disabled>
+                              <option>Block</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-4">Output</h4>
+                          <div className="flex items-center gap-3 mb-2">
+                            <input type="checkbox" className="rounded" disabled />
+                            <label className="text-sm text-gray-500">Enable</label>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-700 block mb-2">Output action</label>
+                            <p className="text-xs text-gray-600 mb-2">
+                              Choose what action the guardrail should take on model outputs before displayed to users
+                            </p>
+                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100" disabled>
+                              <option>Block</option>
+                            </select>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Custom Words */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Add custom words and phrases</h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Specify up to 10,000 words or phrases (max 100 characters per) to be blocked by the guardrail. A blocked message will show if user input or model responses contain these words or phrases.
+                    </p>
+
+                    <div className="space-y-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <input type="radio" name="wordSource" defaultChecked />
+                        <div>
+                          <label className="text-sm font-medium text-gray-900 block">Add words and phrases manually</label>
+                          <p className="text-xs text-gray-600">Manually add words and phrases to the following table.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input type="radio" name="wordSource" />
+                        <div>
+                          <label className="text-sm font-medium text-gray-900 block">Upload from a local file</label>
+                          <p className="text-xs text-gray-600">Populate the following table with words and phrases from a .txt or .csv file from your computer.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input type="radio" name="wordSource" />
+                        <div>
+                          <label className="text-sm font-medium text-gray-900 block">Upload from S3 object</label>
+                          <p className="text-xs text-gray-600">Populate the following table with words and phrases from an S3 object.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-semibold text-gray-900">View and edit words and phrases (1)</h4>
+                        <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                          Add
+                        </button>
+                      </div>
+
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                              <th className="px-4 py-2 text-left"><input type="checkbox" /></th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Word or phrase</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Enable input</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Input action</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Enable output</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Output action</th>
+                              <th className="px-4 py-2 text-left font-medium text-gray-700">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b border-gray-100">
+                              <td className="px-4 py-3"><input type="checkbox" /></td>
+                              <td className="px-4 py-3 text-gray-900">word or phrase</td>
+                              <td className="px-4 py-3"><input type="checkbox" defaultChecked /></td>
+                              <td className="px-4 py-3">
+                                <select className="px-3 py-1 border border-gray-300 rounded text-sm">
+                                  <option>Block</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-3"><input type="checkbox" defaultChecked /></td>
+                              <td className="px-4 py-3">
+                                <select className="px-3 py-1 border border-gray-300 rounded text-sm">
+                                  <option>Block</option>
+                                </select>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center gap-1 text-green-600 text-xs">
+                                  <Check className="w-4 h-4" />
+                                  Valid
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div className="mt-4">
+                        <button className="px-4 py-2 text-sm text-indigo-600 border border-indigo-600 hover:bg-indigo-50 rounded-lg">
+                          Add a word or phrase
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep(5)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(3)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 text-indigo-600 hover:text-indigo-700"
+                  >
+                    Skip to Review and create
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Sensitive Information Filters */}
+            {currentStep === 5 && (
+              <div className="max-w-5xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Add sensitive information filters - <span className="italic font-normal">optional</span>
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Use these filters to handle any data related to privacy.
+                </p>
+
+                <div className="space-y-6">
+                  {/* PII Types */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">
+                      Personally Identifiable Information (PII) types
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Specify the types of PII to be filtered and the desired guardrail behavior.
+                    </p>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-900">PII types</h4>
+                      <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                        Add new PII
+                      </button>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg p-8 text-center text-gray-500">
+                      No PII types added.
+                    </div>
+                  </div>
+
+                  {/* Regex Patterns */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Regex patterns</h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Add up to 10 regex patterns to filter custom types of sensitive information and specify the desired guardrail behavior.
+                    </p>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-semibold text-gray-900">Regex patterns</h4>
+                      <button className="px-4 py-2 text-sm text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg">
+                        Add regex pattern
+                      </button>
+                    </div>
+
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 border-b border-gray-200">
+                          <tr>
+                            <th className="px-4 py-3 text-left"><input type="checkbox" /></th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Name</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Regex pattern</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Input action</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Output action</th>
+                            <th className="px-4 py-3 text-left font-medium text-gray-700">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                              No regex patterns added.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep(6)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(4)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 text-indigo-600 hover:text-indigo-700"
+                  >
+                    Skip to Review and create
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 6: Contextual Grounding Check */}
+            {currentStep === 6 && (
+              <div className="max-w-5xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  Add contextual grounding check - <span className="italic font-normal">optional</span>
+                  <button className="text-indigo-600 hover:text-indigo-700">
+                    <Info className="w-4 h-4" />
+                  </button>
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Use this policy to validate if model responses are grounded in the reference source and relevant to user's query to filter model hallucination.
+                </p>
+
+                <div className="space-y-6">
+                  {/* Grounding */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Grounding</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Validate if the model responses are grounded and factually correct based on the information provided in the reference source, and block responses that are below the defined threshold of grounding.
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" className="rounded w-5 h-5" />
+                      <label className="text-sm font-medium text-gray-900">
+                        Enable grounding check
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Relevance */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-2">Relevance</h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Validate if the model responses are relevant to the user's query and block responses that are below the defined threshold of relevance.
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" className="rounded w-5 h-5" />
+                      <label className="text-sm font-medium text-gray-900">
+                        Enable relevance check
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(5)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 text-gray-600 hover:text-gray-700"
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>
