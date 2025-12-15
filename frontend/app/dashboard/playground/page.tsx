@@ -30,11 +30,6 @@ interface ModelOption {
 const models: ModelOption[] = [
   { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCost: 0.005, outputCost: 0.015 },
   { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI', inputCost: 0.03, outputCost: 0.06 },
-  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI', inputCost: 0.0015, outputCost: 0.002 },
-  { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'Anthropic', inputCost: 0.003, outputCost: 0.015 },
-  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic', inputCost: 0.00025, outputCost: 0.00125 },
-  { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', inputCost: 0.015, outputCost: 0.075 },
-  { id: 'llama-3-70b', name: 'Llama 3 70B', provider: 'Meta', inputCost: 0.00265, outputCost: 0.0035 },
 ];
 
 const keys = [
@@ -75,56 +70,91 @@ export default function PlaygroundPage() {
     const newMessage: Message = { role: 'user', content: userMessage };
     setMessages([...messages, newMessage]);
 
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            { role: 'system', content: systemMessage },
+            ...messages,
+            newMessage,
+          ],
+          temperature: temperature,
+          max_tokens: maxTokens,
+          stream: true,
+        }),
+      });
 
-    const mockResponses: Record<string, string> = {
-      'gpt-4o': `I'd be happy to help you with that! As GPT-4o, I can assist with coding, analysis, writing, and more.
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.statusText}`);
+      }
 
-Here's an example:
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
 
-\`\`\`python
-def hello_world():
-    print("Hello from GPT-4o!")
-    return True
-\`\`\`
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-Is there anything specific you'd like me to help you with?`,
-      'claude-3-sonnet': `Hello! I'm Claude 3 Sonnet, ready to assist you with:
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
 
-- **Analysis**: Complex reasoning and problem-solving
-- **Writing**: Creative and technical content
-- **Coding**: Multiple programming languages
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
 
-How can I help you today?`,
-      default: `This is a simulated response from ${currentModel.name}. In production, this would be a real API call through your proxy.`,
-    };
+              try {
+                const parsed = JSON.parse(data);
+                const content = parsed.choices[0]?.delta?.content || '';
+                if (content) {
+                  fullResponse += content;
+                  setResponse(fullResponse);
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+      }
 
-    const fullResponse = mockResponses[selectedModel] || mockResponses['default'];
+      const latencyMs = Date.now() - startTime;
+      const inputTokens = Math.floor((systemMessage.length + userMessage.length) / 4);
+      const outputTokens = Math.floor(fullResponse.length / 4);
+      const cost = (inputTokens / 1000) * currentModel.inputCost + (outputTokens / 1000) * currentModel.outputCost;
 
-    for (let i = 0; i < fullResponse.length; i += 5) {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      setResponse(fullResponse.substring(0, i + 5));
+      setMetrics({
+        inputTokens,
+        outputTokens,
+        latencyMs,
+        cost,
+      });
+
+      setMessages([
+        ...messages,
+        newMessage,
+        { role: 'assistant', content: fullResponse },
+      ]);
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      const errorMessage = `Error: ${error instanceof Error ? error.message : 'Failed to get response'}`;
+      setResponse(errorMessage);
+      setMessages([
+        ...messages,
+        newMessage,
+        { role: 'assistant', content: errorMessage },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-    setResponse(fullResponse);
-
-    const latencyMs = Date.now() - startTime;
-    const inputTokens = Math.floor((systemMessage.length + userMessage.length) / 4);
-    const outputTokens = Math.floor(fullResponse.length / 4);
-    const cost = (inputTokens / 1000) * currentModel.inputCost + (outputTokens / 1000) * currentModel.outputCost;
-
-    setMetrics({
-      inputTokens,
-      outputTokens,
-      latencyMs,
-      cost,
-    });
-
-    setMessages([
-      ...messages,
-      newMessage,
-      { role: 'assistant', content: fullResponse },
-    ]);
-    setIsLoading(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {

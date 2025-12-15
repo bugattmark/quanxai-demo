@@ -149,28 +149,28 @@ export default function Sidebar() {
         /> */}
 
         {/* Usage */}
-        {/* <NavItem
+        <NavItem
           href="/dashboard/usage"
           icon={<BarChart3 className="w-5 h-5" />}
           label="Usage"
           isActive={pathname.startsWith('/dashboard/usage')}
-        /> */}
+        />
 
         {/* Teams */}
-        {/* <NavItem
+        <NavItem
           href="/dashboard/teams"
           icon={<Users className="w-5 h-5" />}
           label="Teams"
           isActive={pathname.startsWith('/dashboard/teams')}
-        /> */}
+        />
 
         {/* Organizations */}
-        {/* <NavItem
+        <NavItem
           href="/dashboard"
           icon={<Building2 className="w-5 h-5" />}
           label="Organizations"
           isActive={pathname === '/dashboard'}
-        /> */}
+        />
 
         {/* Internal Users */}
         <NavItem
@@ -205,12 +205,12 @@ export default function Sidebar() {
         /> */}
 
         {/* Guardrails */}
-        {/* <NavItem
+        <NavItem
           href="/dashboard/guardrails"
           icon={<Shield className="w-5 h-5" />}
           label="Guardrails"
           isActive={pathname.startsWith('/dashboard/guardrails')}
-        /> */}
+        />
 
         {/* Products Section */}
         {/* <ExpandableSection
