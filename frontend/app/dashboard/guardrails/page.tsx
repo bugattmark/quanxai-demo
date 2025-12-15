@@ -1,12 +1,42 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2, ArrowUpDown } from 'lucide-react';
+import { Plus, Trash2, ArrowUpDown, ChevronRight, X, Check, Info } from 'lucide-react';
 import { guardrails, Guardrail } from '@/data/mock/guardrails';
 
+type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export default function GuardrailsPage() {
+  const [showWizard, setShowWizard] = useState(false);
+  const [currentStep, setCurrentStep] = useState<Step>(1);
   const [sortColumn, setSortColumn] = useState<string>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    blockedMessage: 'Sorry, the model cannot answer this question.',
+    applyToResponse: true,
+    // Content filters
+    enableContentFilters: true,
+    useSameFilters: true,
+    hateSeverity: 3,
+    insultsSeverity: 3,
+    sexualSeverity: 3,
+    violenceSeverity: 3,
+    misconductSeverity: 3,
+    promptAttackSeverity: 3,
+    contentFilterTier: 'classic',
+    // Denied topics
+    deniedTopics: [] as any[],
+    // Word filters
+    filterProfanity: false,
+    customWords: [] as string[],
+    // PII filters
+    piiTypes: [] as string[],
+    regexPatterns: [] as any[],
+  });
 
   const sortedGuardrails = [...guardrails].sort((a, b) => {
     let aVal = a[sortColumn as keyof Guardrail];
@@ -19,6 +49,24 @@ export default function GuardrailsPage() {
     if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
+  const steps = [
+    { num: 1, title: 'Provide guardrail details', optional: false },
+    { num: 2, title: 'Configure content filters', optional: true },
+    { num: 3, title: 'Add denied topics', optional: true },
+    { num: 4, title: 'Add word filters', optional: true },
+    { num: 5, title: 'Add sensitive information filters', optional: true },
+    { num: 6, title: 'Add contextual grounding check', optional: true },
+    { num: 7, title: 'Review and create', optional: false },
+  ];
+
+  const categories = [
+    { id: 'hate', label: 'Hate', value: formData.hateSeverity, onChange: (v: number) => setFormData({ ...formData, hateSeverity: v }) },
+    { id: 'insults', label: 'Insults', value: formData.insultsSeverity, onChange: (v: number) => setFormData({ ...formData, insultsSeverity: v }) },
+    { id: 'sexual', label: 'Sexual', value: formData.sexualSeverity, onChange: (v: number) => setFormData({ ...formData, sexualSeverity: v }) },
+    { id: 'violence', label: 'Violence', value: formData.violenceSeverity, onChange: (v: number) => setFormData({ ...formData, violenceSeverity: v }) },
+    { id: 'misconduct', label: 'Misconduct', value: formData.misconductSeverity, onChange: (v: number) => setFormData({ ...formData, misconductSeverity: v }) },
+  ];
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -61,13 +109,502 @@ export default function GuardrailsPage() {
     return providers[type] || type;
   };
 
+  const getSeverityLabel = (value: number) => {
+    const labels = ['None', 'Low', 'Medium', 'High'];
+    return labels[value] || 'None';
+  };
+
+  if (showWizard) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Create guardrail</h1>
+            <button
+              onClick={() => setShowWizard(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex">
+          {/* Sidebar Steps */}
+          <div className="w-64 bg-white border-r border-gray-200 p-6 space-y-1">
+            {steps.map((step) => (
+              <div
+                key={step.num}
+                className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
+                  currentStep === step.num
+                    ? 'bg-indigo-50 border-l-4 border-indigo-600 pl-2'
+                    : 'hover:bg-gray-50'
+                }`}
+                onClick={() => setCurrentStep(step.num as Step)}
+              >
+                <div
+                  className={`flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
+                    currentStep === step.num
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {currentStep > step.num ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    step.num
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-900">
+                    Step {step.num}
+                    {step.optional && (
+                      <span className="text-xs text-gray-500 italic ml-1">- optional</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    {step.title}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 p-8">
+            {/* Step 1: Guardrail Details */}
+            {currentStep === 1 && (
+              <div className="max-w-3xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
+                  Provide guardrail details
+                </h2>
+
+                <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Guardrail details
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Name
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Enter name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Valid characters are a-z, A-Z, 0-9, _ (underscore) and - (hyphen). The name can have up to 50 characters.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Description - <span className="italic font-normal">optional</span>
+                        </label>
+                        <textarea
+                          placeholder="Enter description"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          rows={3}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          The description can have up to 200 characters.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Messaging for blocked prompts
+                        </label>
+                        <p className="text-sm text-gray-600 mb-2">
+                          Enter a message to display if your guardrail blocks the user prompt.
+                        </p>
+                        <textarea
+                          value={formData.blockedMessage}
+                          onChange={(e) => setFormData({ ...formData, blockedMessage: e.target.value })}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          The message can have up to 500 characters.
+                        </p>
+                      </div>
+
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.applyToResponse}
+                          onChange={(e) => setFormData({ ...formData, applyToResponse: e.target.checked })}
+                          className="mt-1"
+                        />
+                        <label className="text-sm text-gray-900">
+                          Apply the same blocked message for responses
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep(2)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setShowWizard(false)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Content Filters */}
+            {currentStep === 2 && (
+              <div className="max-w-5xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Configure content filters
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Step 2 - <span className="italic">optional</span>
+                </p>
+
+                <div className="space-y-6">
+                  {/* Harmful Categories */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Harmful categories
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Enable detection and blocking of harmful user inputs and model responses. Use a higher filter strength to help improve the filtering of harmful content in each category.
+                    </p>
+
+                    <div className="flex items-center gap-3 mb-6">
+                      <input
+                        type="checkbox"
+                        checked={formData.enableContentFilters}
+                        onChange={(e) => setFormData({ ...formData, enableContentFilters: e.target.checked })}
+                        className="rounded"
+                      />
+                      <label className="text-sm font-medium text-gray-900">
+                        Configure harmful categories filters
+                      </label>
+                    </div>
+
+                    {formData.enableContentFilters && (
+                      <>
+                        <div className="mb-6">
+                          <h4 className="text-base font-semibold text-gray-900 mb-4 flex items-center justify-between">
+                            Filters for prompts
+                            <button className="text-sm text-indigo-600 hover:text-indigo-700">
+                              Reset thresholds
+                            </button>
+                          </h4>
+
+                          <div className="flex items-center gap-3 mb-4">
+                            <input
+                              type="checkbox"
+                              checked={formData.useSameFilters}
+                              onChange={(e) => setFormData({ ...formData, useSameFilters: e.target.checked })}
+                              className="rounded"
+                            />
+                            <label className="text-sm text-gray-900">
+                              Use the same harmful categories filters for responses
+                            </label>
+                          </div>
+
+                          <div className="space-y-6">
+                            {categories.map((cat) => (
+                              <div key={cat.id} className="grid grid-cols-12 gap-4 items-center">
+                                <div className="col-span-3">
+                                  <div className="flex items-center gap-2">
+                                    <input type="checkbox" className="rounded" defaultChecked />
+                                    <label className="text-sm font-medium text-gray-900">
+                                      Text
+                                    </label>
+                                  </div>
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="text-sm font-medium text-gray-900 capitalize">
+                                    {cat.label}
+                                  </span>
+                                </div>
+                                <div className="col-span-2">
+                                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                    <option>Block</option>
+                                    <option>Monitor</option>
+                                  </select>
+                                </div>
+                                <div className="col-span-5 flex items-center gap-4">
+                                  <span className="text-xs text-gray-500 w-12">None</span>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="3"
+                                    value={cat.value}
+                                    onChange={(e) => cat.onChange(parseInt(e.target.value))}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-xs text-gray-500 w-12 text-right">High</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Prompt Attacks */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Prompt attacks
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Enable to detect and block user inputs attempting to override system instructions.
+                    </p>
+
+                    <div className="flex items-center gap-3 mb-4">
+                      <input type="checkbox" className="rounded" defaultChecked />
+                      <label className="text-sm font-medium text-gray-900">
+                        Configure prompt attacks filter
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-12 gap-4 items-center">
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" className="rounded" defaultChecked />
+                          <label className="text-sm font-medium text-gray-900">
+                            Text
+                          </label>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-sm font-medium text-gray-900">
+                          Prompt Attack
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                          <option>Block</option>
+                          <option>Monitor</option>
+                        </select>
+                      </div>
+                      <div className="col-span-5 flex items-center gap-4">
+                        <span className="text-xs text-gray-500 w-12">None</span>
+                        <input type="range" min="0" max="3" defaultValue="3" className="flex-1" />
+                        <span className="text-xs text-gray-500 w-12 text-right">High</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content Filter Tier */}
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      Content filters tier
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Choose your prefered model tier to balance performance, accuracy, and compatibility with your existing workflows.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className={`border-2 rounded-lg p-4 cursor-pointer ${
+                        formData.contentFilterTier === 'classic' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => setFormData({ ...formData, contentFilterTier: 'classic' })}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <input
+                            type="radio"
+                            checked={formData.contentFilterTier === 'classic'}
+                            onChange={() => setFormData({ ...formData, contentFilterTier: 'classic' })}
+                            className="text-indigo-600"
+                          />
+                          <h4 className="text-base font-semibold text-gray-900">Classic</h4>
+                        </div>
+                        <p className="text-sm text-gray-600 pl-7">
+                          An established solution supporting English, French, and Spanish languages. This tier does not require you to opt into cross-Region inference.
+                        </p>
+                      </div>
+
+                      <div className={`border-2 rounded-lg p-4 cursor-pointer ${
+                        formData.contentFilterTier === 'standard' ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200'
+                      }`}
+                      onClick={() => setFormData({ ...formData, contentFilterTier: 'standard' })}>
+                        <div className="flex items-center gap-3 mb-2">
+                          <input
+                            type="radio"
+                            checked={formData.contentFilterTier === 'standard'}
+                            onChange={() => setFormData({ ...formData, contentFilterTier: 'standard' })}
+                            className="text-indigo-600"
+                          />
+                          <h4 className="text-base font-semibold text-gray-900">Standard</h4>
+                        </div>
+                        <p className="text-sm text-gray-600 pl-7">
+                          An improved, more robust solution offering higher accuracy supporting over 50 languages. This tier requires you to opt into cross-Region inference.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep(3)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(1)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 text-indigo-600 hover:text-indigo-700"
+                  >
+                    Skip to Review and create
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3-6 Placeholders */}
+            {(currentStep === 3 || currentStep === 4 || currentStep === 5 || currentStep === 6) && (
+              <div className="max-w-3xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  {steps.find(s => s.num === currentStep)?.title}
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Step {currentStep} - <span className="italic">optional</span>
+                </p>
+
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <p className="text-gray-500 text-center py-8">
+                    This section is optional and can be configured later.
+                  </p>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => setCurrentStep((currentStep + 1) as Step)}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep((currentStep - 1) as Step)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(7)}
+                    className="px-6 py-2 text-indigo-600 hover:text-indigo-700"
+                  >
+                    Skip to Review and create
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 7: Review and Create */}
+            {currentStep === 7 && (
+              <div className="max-w-3xl">
+                <h2 className="text-xl font-bold text-gray-900 mb-6">
+                  Review and create
+                </h2>
+
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">
+                      Guardrail details
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex">
+                        <span className="w-32 text-gray-600">Name:</span>
+                        <span className="text-gray-900 font-medium">{formData.name || '(Not set)'}</span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-32 text-gray-600">Description:</span>
+                        <span className="text-gray-900">{formData.description || '(Not set)'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">
+                      Content filters
+                    </h3>
+                    <div className="text-sm text-gray-600">
+                      {formData.enableContentFilters ? `Enabled with ${formData.contentFilterTier} tier` : 'Not configured'}
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <h3 className="text-base font-semibold text-gray-900 mb-4">
+                      Optional configurations
+                    </h3>
+                    <div className="text-sm text-gray-600">
+                      Denied topics, word filters, sensitive information filters, and contextual grounding check: Not configured
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowWizard(false);
+                      setCurrentStep(1);
+                    }}
+                    className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+                  >
+                    Create guardrail
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep(6)}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setShowWizard(false)}
+                    className="px-6 py-2 text-gray-600 hover:text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // List View
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header with Add Button */}
       <div className="mb-6">
-        <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
+        <button
+          onClick={() => setShowWizard(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+        >
           <Plus className="w-4 h-4" />
-          Add New Guardrail
+          Create guardrail
         </button>
       </div>
 

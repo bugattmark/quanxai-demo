@@ -30,6 +30,11 @@ interface ModelOption {
 const models: ModelOption[] = [
   { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', inputCost: 0.005, outputCost: 0.015 },
   { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI', inputCost: 0.03, outputCost: 0.06 },
+  { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', provider: 'OpenAI', inputCost: 0.0015, outputCost: 0.002 },
+  { id: 'claude-3-sonnet', name: 'Claude 3 Sonnet', provider: 'Anthropic', inputCost: 0.003, outputCost: 0.015 },
+  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', provider: 'Anthropic', inputCost: 0.00025, outputCost: 0.00125 },
+  { id: 'claude-3-opus', name: 'Claude 3 Opus', provider: 'Anthropic', inputCost: 0.015, outputCost: 0.075 },
+  { id: 'llama-3-70b', name: 'Llama 3 70B', provider: 'Meta', inputCost: 0.00265, outputCost: 0.0035 },
 ];
 
 const keys = [
