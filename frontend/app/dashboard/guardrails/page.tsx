@@ -46,6 +46,7 @@ export default function GuardrailsPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [sortColumn, setSortColumn] = useState<string>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [guardrailsList, setGuardrailsList] = useState<Guardrail[]>(guardrails);
 
   // Modal states
   const [showDeniedTopicModal, setShowDeniedTopicModal] = useState(false);
@@ -92,7 +93,7 @@ export default function GuardrailsPage() {
   });
 
   // Form state
-  const [formData, setFormData] = useState({
+  const getInitialFormData = () => ({
     name: '',
     description: '',
     blockedMessage: 'Sorry, the model cannot answer this question.',
@@ -108,84 +109,22 @@ export default function GuardrailsPage() {
     promptAttackSeverity: 3,
     contentFilterTier: 'classic',
     // Denied topics
-    deniedTopics: [
-      {
-        name: 'Investment_Advice',
-        definition: 'Investment advice refers to inquiries, guidance, or recommendations regarding the management or allocation of funds or assets with the goal of generating returns or achieving specific financial objectives.',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-      },
-      {
-        name: 'Political_Opinion',
-        definition: 'Discussion of political candidates, parties, or election predictions.',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: false,
-        outputAction: 'Block',
-      },
-    ] as DeniedTopic[],
+    deniedTopics: [] as DeniedTopic[],
     deniedTopicsTier: 'classic',
     // Word filters
     filterProfanity: false,
-    customWords: [
-      {
-        phrase: 'confidential',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-      },
-      {
-        phrase: 'secret password',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-      },
-    ] as CustomWord[],
+    customWords: [] as CustomWord[],
     // PII filters
-    piiTypes: [
-      {
-        type: 'EMAIL',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-      },
-      {
-        type: 'PHONE',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: false,
-        outputAction: 'Block',
-      },
-      {
-        type: 'CREDIT_CARD',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-      },
-    ] as PIIType[],
-    regexPatterns: [
-      {
-        name: 'Booking_ID',
-        pattern: '^ID\\d{3}[A-Z]{3}$',
-        inputEnabled: true,
-        inputAction: 'Block',
-        outputEnabled: true,
-        outputAction: 'Block',
-        description: 'Matches booking IDs in format ID123ABC',
-      },
-    ] as RegexPattern[],
+    piiTypes: [] as PIIType[],
+    regexPatterns: [] as RegexPattern[],
     // Grounding check
     enableGrounding: false,
     enableRelevance: false,
   });
 
-  const sortedGuardrails = [...guardrails].sort((a, b) => {
+  const [formData, setFormData] = useState(getInitialFormData());
+
+  const sortedGuardrails = [...guardrailsList].sort((a, b) => {
     let aVal = a[sortColumn as keyof Guardrail];
     let bVal = b[sortColumn as keyof Guardrail];
 
@@ -320,6 +259,23 @@ export default function GuardrailsPage() {
     });
   };
 
+  const handleCreateGuardrail = () => {
+    const newGuardrail: Guardrail = {
+      id: `gr-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: formData.name || 'Untitled Guardrail',
+      type: 'bedrock',
+      mode: 'during' as const,
+      enabled: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    setGuardrailsList([newGuardrail, ...guardrailsList]);
+    setFormData(getInitialFormData());
+    setCurrentStep(1);
+    setShowWizard(false);
+  };
+
   const SortButton = ({ column, label }: { column: string; label: string }) => (
     <button
       onClick={() => handleSort(column)}
@@ -386,7 +342,11 @@ export default function GuardrailsPage() {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Create guardrail</h1>
             <button
-              onClick={() => setShowWizard(false)}
+              onClick={() => {
+                setShowWizard(false);
+                setFormData(getInitialFormData());
+                setCurrentStep(1);
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               <X className="w-6 h-6" />
@@ -526,7 +486,11 @@ export default function GuardrailsPage() {
                     Next
                   </button>
                   <button
-                    onClick={() => setShowWizard(false)}
+                    onClick={() => {
+                      setShowWizard(false);
+                      setFormData(getInitialFormData());
+                      setCurrentStep(1);
+                    }}
                     className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                   >
                     Cancel
@@ -1797,10 +1761,7 @@ export default function GuardrailsPage() {
 
                 <div className="mt-6 flex gap-3">
                   <button
-                    onClick={() => {
-                      setShowWizard(false);
-                      setCurrentStep(1);
-                    }}
+                    onClick={handleCreateGuardrail}
                     className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
                   >
                     Create guardrail
@@ -1812,7 +1773,11 @@ export default function GuardrailsPage() {
                     Previous
                   </button>
                   <button
-                    onClick={() => setShowWizard(false)}
+                    onClick={() => {
+                      setShowWizard(false);
+                      setFormData(getInitialFormData());
+                      setCurrentStep(1);
+                    }}
                     className="px-6 py-2 text-gray-600 hover:text-gray-700"
                   >
                     Cancel
@@ -1911,7 +1876,12 @@ export default function GuardrailsPage() {
                   {formatDate(guardrail.updatedAt || guardrail.createdAt)}
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors">
+                  <button
+                    onClick={() => {
+                      setGuardrailsList(guardrailsList.filter((g) => g.id !== guardrail.id));
+                    }}
+                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </td>
